@@ -6,10 +6,12 @@ https://codepen.io/iroshan/pen/ReZxZy
 
 ## API
 
-JSONEditor(Element container) - set the root element for the editor
-setTitle(string title) - set the title of the editor
-setJSON(JSON json) - set JSON for edit
-getJSON() - get edited JSON
+```javascript
+new JSONEditor(Element container) // set the root element for the editor
+setTitle(String title) // set the title of the editor
+setJSON(JSON json) // set JSON for edit
+getJSON() // get edited JSON
+```
 
 ## Example
 HTML:
