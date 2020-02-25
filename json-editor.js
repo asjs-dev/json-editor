@@ -1,6 +1,6 @@
 "use strict";
 
-var JSONEditor = function() {
+var JSONEditor = function(container) {
 	var _scope = {};
 
 	var EDITOR_ID = "json_editor";
@@ -17,6 +17,8 @@ var JSONEditor = function() {
 	(function constructor() {
 		_jsonFormContainer = document.createElement("div");
 		_jsonFormContainer.id = EDITOR_ID;
+    
+		container.appendChild(_jsonFormContainer);
 	})();
 
 	_scope.setTitle = function(title) {
@@ -24,12 +26,11 @@ var JSONEditor = function() {
 		trySetTitle();
 	}
 
-	_scope.setJSON = function(container, value) {
+	_scope.setJSON = function(value) {
 		_json = value;
 
 		_jsonFormContainer.innerHTML = "";
-		container.appendChild(_jsonFormContainer);
-		
+    
 		_tabIndex = -1;
     
 		parse(_jsonFormContainer, ROOT_NAME, _json);
