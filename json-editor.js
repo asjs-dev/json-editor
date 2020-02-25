@@ -1,3 +1,5 @@
+"use strict";
+
 var JSONEditor = function() {
 	var _scope = {};
 
@@ -27,9 +29,9 @@ var JSONEditor = function() {
 
 		_jsonFormContainer.innerHTML = "";
 		container.appendChild(_jsonFormContainer);
-
+		
 		_tabIndex = -1;
-
+    
 		parse(_jsonFormContainer, ROOT_NAME, _json);
 		trySetTitle();
 	}
@@ -40,23 +42,26 @@ var JSONEditor = function() {
 
 	function trySetTitle() {
 		if (!_title) return;
-		if (!(baseContainer = _jsonFormContainer.querySelector("#" + BASE_ID))) return;
-		if (!(baseLabel = baseContainer.querySelector("label"))) return;
+		var baseContainer = _jsonFormContainer.querySelector("#" + BASE_ID)
+		if (!baseContainer) return;
+		var baseLabel = baseContainer.querySelector("label")
+		if (!baseLabel) return;
 		baseLabel.innerText = _title;
 		baseLabel.setAttribute("title", _title);
 	}
 
 	function parse(container, name, values) {
 		var key;
-		var parent = createContainer(container, name, container.id + "-" + name);
+		var parent = createContainer(container, name, createId(container.id, name));
 
 		for (key in values) {
 			var value = values[key];
 			switch (getType(value)) {
-				case "object" : parse(parent, key, value);                 break;
-				case "enum"   : createDropDown(parent, key, value.values); break;
-				case "array"  : createArray(parent, key, value);           break;
-				default       : createTextInput(parent, key, value);       break;
+				case "object" : parse(parent, key, value);                  break;
+				case "enum"    : createDropDown(parent, key, value.values); break;
+				case "boolean" : createBoolean(parent, key, value);         break;
+				case "array"   : createArray(parent, key, value);           break;
+				default        : createTextInput(parent, key, value);       break;
 			}
 		}
 	}
@@ -66,14 +71,16 @@ var JSONEditor = function() {
 		var out = {};
 
 		for (key in values) {
-			var newId = id + "-" + key;
+			var newId = createId(id, key);
 			if (!isUseableValue(newId)) continue;
 			var value = values[key];
 			var response;
 			switch (getType(value)) {
-				case "object" : response = getJSON(value, newId); break;
-				case "array"  : response = getArrayValue(newId);  break;
-				default       : response = getValue(newId);       break;
+				case "object"  : response = getJSON(value, newId);  break;
+				case "array"   : response = getArrayValue(newId);   break;
+				case "boolean" : response = getBooleanValue(newId); break;
+				case "number"  : response = getNumberValue(newId);  break;
+				default        : response = getValue(newId);        break;
 			}
 			out[key] = response;
 		}
@@ -90,29 +97,36 @@ var JSONEditor = function() {
 	}
 
 	function isUseableValue(id) {
-		return _jsonFormContainer.querySelector("input#checkbox-" + id).checked;
-	}
-
-	function getTypedValue(value) {
-		var numericValue = parseFloat(value);
-		return value == numericValue ? numericValue : value;
+		return _jsonFormContainer.querySelector(createId("input#checkbox", id)).checked;
 	}
 
 	function getValue(id) {
-		return getTypedValue(_jsonFormContainer.querySelector("#input-" + id).value);
+		return getInputById(id).value;
 	}
 
+	function getBooleanValue(id) {
+		return getInputById(id).checked;
+	}
+  
+	function getNumberValue(id) {
+		return parseFloat(getInputById(id).value);
+	}
+	
+	function getInputById(id) {
+		return _jsonFormContainer.querySelector("#" + createInputId(id));
+	}
+  
 	function getArrayValue(id) {
 		return JSON.parse("[" + getValue(id) + "]");
 	}
 
 	function createBox(parent, id) {
 		var box           = createElement("div");
-			box.id        = id;
-			box.className = "json-editor-container" + (id === BASE_ID ? " root" : "");
+		    box.id        = id;
+		    box.className = "json-editor-container" + (id === BASE_ID ? " root" : "");
 
 		parent.appendChild(box);
-
+		
 		return box;
 	}
 
@@ -120,72 +134,93 @@ var JSONEditor = function() {
 		if (id === BASE_ID) return;
 
 		var checkbox          = createElement("input");
-			checkbox.id       = "checkbox-" + id;
-			checkbox.type     = "checkbox";
-			checkbox.checked  = true;
-			checkbox.tabIndex = ++_tabIndex;
-			checkbox.addEventListener("change", function() {
-				parent.className = parent.className.replace("hidden-property", "");
-				if (!this.checked) parent.className += " hidden-property";
-			});
+		    checkbox.id       = createId("checkbox", id);
+		    checkbox.type     = "checkbox";
+		    checkbox.checked  = true;
+		    checkbox.tabIndex = ++_tabIndex;
+		    checkbox.addEventListener("change", function() {
+			    parent.className = parent.className.replace("hidden-property", "");
+			    if (!this.checked) parent.className += " hidden-property";
+		    });
 
 		parent.appendChild(checkbox);
 	}
 
 	function createLabel(parent, name) {
 		var label           = createElement("label");
-			label.innerText = name;
-			label.setAttribute("title", name);
+		    label.innerText = name;
+		    label.setAttribute("title", name);
 
 		parent.appendChild(label);
-
+		
 		return label;
 	}
 
 	function createContainer(parent, name, id) {
 		var box = createBox(parent, id);
-
+		
 		createCheckbox(box, id);
 		createLabel(box, name);
-
+		
 		return box;
 	}
 
-	function createTextInput(parent, name, value) {
-		var id        = parent.id + "-" + name;
+	function createBoolean(parent, name, value) {
+		var id        = createId(parent.id, name);
 		var container = createContainer(parent, name, id);
-
+		
+		var checkbox            = createElement("input");
+		    checkbox.id         = createInputId(id);
+		    checkbox.type       = "checkbox";
+		    checkbox.checked    = value;
+		    checkbox.tabIndex   = ++_tabIndex;
+		
+		container.appendChild(checkbox);
+	}
+  
+	function createTextInput(parent, name, value) {
+		var id        = createId(parent.id, name);
+		var container = createContainer(parent, name, id);
+		
 		var textInput          = createElement("input");
-			textInput.id       = "input-" + id;
-			textInput.type     = "text";
-			textInput.value    = value;
-			textInput.tabIndex = ++_tabIndex;
-
+		    textInput.id       = createInputId(id);
+		    textInput.type     = "text";
+		    textInput.value    = value;
+		    textInput.tabIndex = ++_tabIndex;
+		
 		container.appendChild(textInput);
 	}
 
 	function createDropDown(parent, name, value) {
-		var id        = parent.id + "-" + name;
+		var id        = createId(parent.id, name);
 		var container = createContainer(parent, name, id);
-
+		
 		var dropDown          = createElement("select");
-			dropDown.id       = "input-" + id;
-			dropDown.tabIndex = ++_tabIndex;
-
+		    dropDown.id       = createInputId(id);
+		    dropDown.tabIndex = ++_tabIndex;
+		
 		var i = -1;
 		var l = value.length;
 
 		var fragment = document.createDocumentFragment();
 		while (++i < l) {
 			var option = createElement("option");
-				option.innerText = option.value = value[i];
+			    option.innerText = option.value = value[i];
 			fragment.appendChild(option);
 		}
 		dropDown.appendChild(fragment);
-
+		
 		container.appendChild(dropDown);
 	}
+	
+	function createId(parentId, name) {
+		return [parentId, name].join("-");
+	}
   
+	function createInputId(id) {
+		return createId("input", id);
+	}
+
 	function createArray(parent, key, values) {
 		var value = [];
 		var i = -1;
